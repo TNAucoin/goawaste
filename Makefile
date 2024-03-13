@@ -10,5 +10,10 @@ zip:
 clean:
 	rm -f bootstrap myfunction.zip
 
+.PHONY: upload
+upload:
+	aws lambda update-function-code --function-name myFunction \
+    --zip-file fileb://myfunction.zip
+
 .PHONY: deploy
-deploy: build zip
+deploy: build zip upload clean
