@@ -2,6 +2,7 @@ package internal
 
 import (
 	"context"
+	"fmt"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
@@ -57,9 +58,8 @@ func GetAvailableVolumes(ctx context.Context, cfg aws.Config) []models.Finding {
 	return availableVolumes
 }
 
-// TODO: figure out timing on the snapshots, and ownership.
 // https://medium.com/@NickHystax/reduce-your-aws-bill-by-cleaning-orphaned-and-unused-disk-snapshots-c3142d6ab84
-func GetUnusedEBSSnapshots(ctx context.Context, cfg aws.Config) []models.Finding {
+func GetUnusedEBSSnapshots(ctx context.Context, cfg aws.Config, event *models.Event) []models.Finding {
 	svc := ec2.NewFromConfig(cfg)
 	var unusedEBSSnapshots []models.Finding
 	var snapshotIds []string
@@ -67,7 +67,7 @@ func GetUnusedEBSSnapshots(ctx context.Context, cfg aws.Config) []models.Finding
 		MaxResults: aws.Int32(10),
 		OwnerIds: []string{
 			"self",
-			"113191093292",
+			fmt.Sprint(event.Account),
 		},
 	})
 	if err != nil {
@@ -100,6 +100,7 @@ func GetUnusedEBSSnapshots(ctx context.Context, cfg aws.Config) []models.Finding
 		if err != nil {
 			panic("failed to describe volumes, " + err.Error())
 		}
+		// if there are volumes with the snapshot, remove the snapshot from the list
 		if len(result.Volumes) > 0 {
 			for _, volume := range result.Volumes {
 				//remove the snapshots that are attached to a volume
@@ -111,6 +112,8 @@ func GetUnusedEBSSnapshots(ctx context.Context, cfg aws.Config) []models.Finding
 
 			}
 		}
+		// TODO: check if the snapshots are associated with AMIs
+
 		// for each snapshot left in the list, generate findings
 		for _, snapshotId := range snapshotIds {
 			unusedEBSSnapshots = append(unusedEBSSnapshots, models.Finding{

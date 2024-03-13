@@ -11,9 +11,6 @@ import (
 )
 
 // https://github.com/karthickcse05/aws_unused_resources/blob/master/Lambda/src/aws_resources.py
-type Event struct {
-	Name string `json:"name"`
-}
 
 func printResults(findings []models.Finding) {
 	for _, finding := range findings {
@@ -22,7 +19,7 @@ func printResults(findings []models.Finding) {
 	}
 }
 
-func HandleRequest(ctx context.Context, event *Event) (*string, error) {
+func HandleRequest(ctx context.Context, event *models.Event) (*string, error) {
 	cfg, err := config.LoadDefaultConfig(context.TODO())
 	if err != nil {
 		panic("configuration error, " + err.Error())
@@ -48,7 +45,7 @@ func HandleRequest(ctx context.Context, event *Event) (*string, error) {
 	if len(unusedRDSSnapshots) > 0 {
 		printResults(unusedRDSSnapshots)
 	}
-	unusedEBSSnapshots := internal.GetUnusedEBSSnapshots(ctx, cfg)
+	unusedEBSSnapshots := internal.GetUnusedEBSSnapshots(ctx, cfg, event)
 	if len(unusedEBSSnapshots) > 0 {
 		printResults(unusedEBSSnapshots)
 	}
